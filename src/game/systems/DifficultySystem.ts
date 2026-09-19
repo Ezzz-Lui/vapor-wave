@@ -1,14 +1,20 @@
-import { DIFFICULTY, GRID, OBSTACLE } from '../config/gameConfig'
+import { DIFFICULTY } from '../config/gameConfig'
+import type { StageDefinition } from './StageSystem'
 
 /**
  * Mutable run-time difficulty. Reset restores base speeds from config.
  */
 export class DifficultySystem {
-  private scrollSpeed: number = GRID.scrollSpeed
-  private spawnInterval: number = OBSTACLE.spawnInterval
+  private scrollSpeed = 0
+  private spawnInterval = 0
+  private stageId = ''
   private stepAccumulator = 0
 
-  update(delta: number): void {
+  update(delta: number, stage: StageDefinition): void {
+    if (stage.id !== this.stageId) {
+      this.applyStage(stage)
+    }
+
     this.stepAccumulator += delta
 
     while (this.stepAccumulator >= DIFFICULTY.stepInterval) {
@@ -25,10 +31,12 @@ export class DifficultySystem {
     return this.spawnInterval
   }
 
-  reset(): void {
-    this.scrollSpeed = GRID.scrollSpeed
-    this.spawnInterval = OBSTACLE.spawnInterval
+  reset(stage: StageDefinition): void {
+    this.stageId = ''
+    this.scrollSpeed = 0
+    this.spawnInterval = 0
     this.stepAccumulator = 0
+    this.applyStage(stage)
   }
 
   private applyStep(): void {
@@ -40,5 +48,18 @@ export class DifficultySystem {
       DIFFICULTY.minSpawnInterval,
       this.spawnInterval * DIFFICULTY.spawnIntervalMultiplier,
     )
+  }
+
+  private applyStage(stage: StageDefinition): void {
+    this.stageId = stage.id
+    this.scrollSpeed = Math.max(
+      this.scrollSpeed,
+      stage.baseScrollSpeed,
+    )
+    this.spawnInterval =
+      this.spawnInterval === 0
+        ? stage.baseSpawnInterval
+        : Math.min(this.spawnInterval, stage.baseSpawnInterval)
+    this.stepAccumulator = 0
   }
 }

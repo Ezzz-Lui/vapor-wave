@@ -35,6 +35,8 @@ export class Player {
   private blinking = false
   private elapsed = 0
   private laneLean = 0
+  private verticalVelocity = 0
+  private grounded = true
 
   constructor() {
     this.body = this.createBody()
@@ -49,7 +51,11 @@ export class Player {
   /**
    * @param laneDelta -1 / 0 / 1 from a single key press edge
    */
-  update(delta: number, laneDelta: number): void {
+  update(
+    delta: number,
+    laneDelta: number,
+    jumpRequested: boolean,
+  ): void {
     this.elapsed += delta
 
     if (laneDelta !== 0) {
@@ -59,6 +65,24 @@ export class Player {
         LANES.count - 1,
       )
       this.laneLean = -laneDelta * 0.32
+    }
+
+    if (jumpRequested && this.grounded) {
+      this.grounded = false
+      this.verticalVelocity = PLAYER.jumpVelocity
+      this.visual.scale.y = 0.82
+    }
+
+    if (!this.grounded) {
+      this.verticalVelocity -= PLAYER.gravity * delta
+      this.group.position.y += this.verticalVelocity * delta
+
+      if (this.group.position.y <= PLAYER.y) {
+        this.group.position.y = PLAYER.y
+        this.verticalVelocity = 0
+        this.grounded = true
+        this.visual.scale.y = 0.88
+      }
     }
 
     const targetX = laneIndexToX(this.laneIndex)
@@ -71,6 +95,12 @@ export class Player {
     this.laneLean = MathUtils.damp(this.laneLean, 0, 8, delta)
     this.visual.rotation.z = this.laneLean
     this.visual.position.y = Math.sin(this.elapsed * 5) * 0.025
+    this.visual.scale.y = MathUtils.damp(
+      this.visual.scale.y,
+      1,
+      11,
+      delta,
+    )
     this.updateBlink(delta)
   }
 
@@ -79,7 +109,10 @@ export class Player {
     this.group.position.set(laneIndexToX(this.laneIndex), PLAYER.y, PLAYER.z)
     this.visual.position.y = 0
     this.visual.rotation.z = 0
+    this.visual.scale.set(1, 1, 1)
     this.laneLean = 0
+    this.verticalVelocity = 0
+    this.grounded = true
     this.elapsed = 0
     this.blinking = false
     this.blinkElapsed = 0

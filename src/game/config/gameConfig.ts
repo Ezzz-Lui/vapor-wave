@@ -41,6 +41,8 @@ export const PLAYER = {
   blinkDuration: 0.13,
   blinkIntervalMin: 2,
   blinkIntervalMax: 4.5,
+  jumpVelocity: 8.8,
+  gravity: 22,
   /** Shrink AABB vs visual mesh so corner grazes feel fair. */
   hitboxScale: 0.78,
 } as const
@@ -52,7 +54,7 @@ export const GRID = {
 } as const
 
 export const WORLD = {
-  objectCount: 18,
+  objectCount: 26,
   nearZ: 12,
   farZ: -62,
   minSideOffset: 2.5,
@@ -92,10 +94,10 @@ export const SCORE = {
 export const DIFFICULTY = {
   /** Scale world speed every N seconds of survival. */
   stepInterval: 10,
-  scrollMultiplier: 1.12,
-  spawnIntervalMultiplier: 0.9,
-  maxScrollSpeed: 42,
-  minSpawnInterval: 0.45,
+  scrollMultiplier: 1.025,
+  spawnIntervalMultiplier: 0.97,
+  maxScrollSpeed: 60,
+  minSpawnInterval: 0.3,
 } as const
 
 export const CAMERA = {

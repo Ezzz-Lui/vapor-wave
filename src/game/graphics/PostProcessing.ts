@@ -5,6 +5,7 @@ import {
   type WebGLRenderer,
 } from 'three'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
+import { AfterimagePass } from 'three/addons/postprocessing/AfterimagePass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
@@ -17,6 +18,7 @@ export class PostProcessing {
   private readonly composer: EffectComposer
   private readonly renderPass: RenderPass
   private readonly bloomPass: UnrealBloomPass
+  private readonly afterimagePass: AfterimagePass
   private readonly outputPass: OutputPass
 
   constructor(
@@ -31,11 +33,14 @@ export class PostProcessing {
       POST_PROCESSING.bloomRadius,
       POST_PROCESSING.bloomThreshold,
     )
+    this.afterimagePass = new AfterimagePass(0.88)
+    this.afterimagePass.enabled = false
     this.outputPass = new OutputPass()
 
     this.composer = new EffectComposer(renderer)
     this.composer.addPass(this.renderPass)
     this.composer.addPass(this.bloomPass)
+    this.composer.addPass(this.afterimagePass)
     this.composer.addPass(this.outputPass)
   }
 
@@ -48,9 +53,17 @@ export class PostProcessing {
     this.composer.setSize(width, height)
   }
 
+  setChallengerEffects(enabled: boolean): void {
+    this.afterimagePass.enabled = enabled
+    this.bloomPass.strength = enabled
+      ? POST_PROCESSING.bloomStrength * 1.28
+      : POST_PROCESSING.bloomStrength
+  }
+
   dispose(): void {
     this.renderPass.dispose()
     this.bloomPass.dispose()
+    this.afterimagePass.dispose()
     this.outputPass.dispose()
     this.composer.dispose()
   }

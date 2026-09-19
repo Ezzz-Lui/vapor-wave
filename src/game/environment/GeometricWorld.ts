@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   BufferGeometry,
+  Color,
   Group,
   IcosahedronGeometry,
   MathUtils,
@@ -27,6 +28,11 @@ interface WorldPiece {
   baseY: number
 }
 
+interface WorldMaterial {
+  readonly material: MeshBasicMaterial
+  readonly colorSlot: number
+}
+
 /**
  * Animated wireframe scenery outside the road. It is decorative only and
  * recycles objects instead of allocating geometry during the game loop.
@@ -37,7 +43,15 @@ export class GeometricWorld {
   private readonly pieces: WorldPiece[] = []
   private readonly geometries: BufferGeometry[] = []
   private readonly materials: MeshBasicMaterial[] = []
+  private readonly worldMaterials: WorldMaterial[] = []
   private readonly horizon = new Group()
+  private readonly targetColors = [
+    new Color(COLORS.worldMagenta),
+    new Color(COLORS.worldViolet),
+    new Color(COLORS.worldCyan),
+  ]
+  private activePieceCount: number = WORLD.objectCount
+  private speedMultiplier = 1
   private elapsed = 0
 
   constructor() {
@@ -47,10 +61,20 @@ export class GeometricWorld {
 
   update(delta: number, scrollSpeed: number): void {
     this.elapsed += delta
-    this.horizon.rotation.z += delta * 0.035
+    this.horizon.rotation.z += delta * 0.035 * this.speedMultiplier
+    const colorBlend = 1 - Math.exp(-delta * 3)
 
-    for (const piece of this.pieces) {
-      piece.mesh.position.z += scrollSpeed * WORLD.scrollRatio * delta
+    for (const entry of this.worldMaterials) {
+      const target = this.targetColors[entry.colorSlot]
+      if (target) entry.material.color.lerp(target, colorBlend)
+    }
+
+    this.pieces.forEach((piece, index) => {
+      piece.mesh.visible = index < this.activePieceCount
+      if (!piece.mesh.visible) return
+
+      piece.mesh.position.z +=
+        scrollSpeed * WORLD.scrollRatio * this.speedMultiplier * delta
       piece.mesh.rotation.x += piece.spinX * delta
       piece.mesh.rotation.y += piece.spinY * delta
       piece.mesh.position.y =
@@ -59,6 +83,33 @@ export class GeometricWorld {
       if (piece.mesh.position.z > WORLD.nearZ) {
         this.placePiece(piece, true)
       }
+    })
+  }
+
+  setStageVisuals(
+    colors: readonly [number, number, number],
+    activePieceCount: number,
+    speedMultiplier: number,
+    immediate = false,
+  ): void {
+    colors.forEach((color, index) => {
+      this.targetColors[index]?.set(color)
+    })
+    this.activePieceCount = Math.min(
+      activePieceCount,
+      this.pieces.length,
+    )
+    this.speedMultiplier = speedMultiplier
+
+    this.pieces.forEach((piece, index) => {
+      piece.mesh.visible = index < this.activePieceCount
+    })
+
+    if (!immediate) return
+
+    for (const entry of this.worldMaterials) {
+      const target = this.targetColors[entry.colorSlot]
+      if (target) entry.material.color.copy(target)
     }
   }
 
@@ -89,7 +140,11 @@ export class GeometricWorld {
 
     colors.forEach((color, index) => {
       const geometry = new TorusGeometry(2.2 + index * 1.3, 0.035, 8, 80)
-      const material = this.createMaterial(color, 0.72 - index * 0.12)
+      const material = this.createMaterial(
+        color,
+        0.72 - index * 0.12,
+        index,
+      )
       const ring = new Mesh(geometry, material)
       ring.rotation.z = index * 0.35
 
@@ -111,7 +166,7 @@ export class GeometricWorld {
           : index % 3 === 1
             ? COLORS.worldMagenta
             : COLORS.worldViolet
-      const material = this.createMaterial(color, 0.72)
+      const material = this.createMaterial(color, 0.72, index % 3)
       const mesh = new Mesh(geometry, material)
       const scale = this.random(WORLD.minScale, WORLD.maxScale)
       mesh.scale.setScalar(scale)
@@ -171,7 +226,11 @@ export class GeometricWorld {
     }
   }
 
-  private createMaterial(color: number, opacity: number): MeshBasicMaterial {
+  private createMaterial(
+    color: number,
+    opacity: number,
+    colorSlot: number,
+  ): MeshBasicMaterial {
     const material = new MeshBasicMaterial({
       color,
       wireframe: true,
@@ -180,6 +239,7 @@ export class GeometricWorld {
       toneMapped: false,
     })
     this.materials.push(material)
+    this.worldMaterials.push({ material, colorSlot })
     return material
   }
 

@@ -1,5 +1,6 @@
 import {
   BufferGeometry,
+  Color,
   Float32BufferAttribute,
   Group,
   LineBasicMaterial,
@@ -22,6 +23,10 @@ export class NeonGrid {
   private readonly segments: Group[]
   private readonly geometries: BufferGeometry[] = []
   private readonly materials: LineBasicMaterial[] = []
+  private readonly primaryMaterials: LineBasicMaterial[] = []
+  private readonly secondaryMaterials: LineBasicMaterial[] = []
+  private readonly targetPrimary = new Color(COLORS.gridPrimary)
+  private readonly targetSecondary = new Color(COLORS.gridSecondary)
   private readonly segmentLength: number
 
   constructor() {
@@ -39,6 +44,14 @@ export class NeonGrid {
 
   update(delta: number, scrollSpeed: number): void {
     const travel = scrollSpeed * delta
+    const colorBlend = 1 - Math.exp(-delta * 4)
+
+    for (const material of this.primaryMaterials) {
+      material.color.lerp(this.targetPrimary, colorBlend)
+    }
+    for (const material of this.secondaryMaterials) {
+      material.color.lerp(this.targetSecondary, colorBlend)
+    }
 
     for (const segment of this.segments) {
       segment.position.z += travel
@@ -49,6 +62,24 @@ export class NeonGrid {
         )
         segment.position.z = farthestZ - this.segmentLength
       }
+    }
+  }
+
+  setPalette(
+    primary: number,
+    secondary: number,
+    immediate = false,
+  ): void {
+    this.targetPrimary.set(primary)
+    this.targetSecondary.set(secondary)
+
+    if (!immediate) return
+
+    for (const material of this.primaryMaterials) {
+      material.color.copy(this.targetPrimary)
+    }
+    for (const material of this.secondaryMaterials) {
+      material.color.copy(this.targetSecondary)
     }
   }
 
@@ -86,9 +117,9 @@ export class NeonGrid {
     }
 
     segment.add(
-      this.createLines(edgeVertices, COLORS.gridPrimary, 1),
-      this.createLines(laneVertices, COLORS.gridSecondary, 0.9),
-      this.createLines(crossVertices, COLORS.gridPrimary, 0.42),
+      this.createLines(edgeVertices, COLORS.gridPrimary, 1, true),
+      this.createLines(laneVertices, COLORS.gridSecondary, 0.9, false),
+      this.createLines(crossVertices, COLORS.gridPrimary, 0.42, true),
     )
 
     return segment
@@ -98,6 +129,7 @@ export class NeonGrid {
     vertices: number[],
     color: number,
     opacity: number,
+    primary: boolean,
   ): LineSegments {
     const geometry = new BufferGeometry()
     geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3))
@@ -111,6 +143,11 @@ export class NeonGrid {
 
     this.geometries.push(geometry)
     this.materials.push(material)
+    if (primary) {
+      this.primaryMaterials.push(material)
+    } else {
+      this.secondaryMaterials.push(material)
+    }
 
     return new LineSegments(geometry, material)
   }
