@@ -21,8 +21,13 @@ export class Obstacle {
   private readonly geometry: BufferGeometry
   private readonly material: MeshStandardMaterial
   private readonly hitbox = new Box3()
+  private readonly kind: ObstacleKind
+  private readonly baseY: number
+  private readonly phase = Math.random() * Math.PI * 2
+  private elapsed = 0
 
   constructor(kind: ObstacleKind, laneIndex: number) {
+    this.kind = kind
     const built = kind === 'cube' ? this.createCube() : this.createPyramid()
     this.geometry = built.geometry
     this.material = built.material
@@ -30,16 +35,24 @@ export class Obstacle {
 
     const height =
       kind === 'cube' ? OBSTACLE.cubeSize : OBSTACLE.pyramidHeight
+    this.baseY = height * 0.5
 
     this.mesh.position.set(
       laneIndexToX(laneIndex),
-      height * 0.5,
+      this.baseY,
       OBSTACLE.spawnZ,
     )
   }
 
   update(delta: number, scrollSpeed: number): void {
+    this.elapsed += delta
     this.mesh.position.z += scrollSpeed * delta
+    this.mesh.position.y =
+      this.baseY + Math.sin(this.elapsed * 3.4 + this.phase) * 0.07
+    this.mesh.rotation.y +=
+      delta * (this.kind === 'pyramid' ? 1.15 : 0.25)
+    this.material.emissiveIntensity =
+      1.45 + Math.sin(this.elapsed * 4 + this.phase) * 0.28
   }
 
   isPastCamera(): boolean {

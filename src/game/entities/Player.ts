@@ -1,11 +1,15 @@
 import {
   Box3,
+  CircleGeometry,
   Group,
   MathUtils,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   SphereGeometry,
   Vector3,
+  type BufferGeometry,
+  type Material,
 } from 'three'
 import {
   COLORS,
@@ -17,19 +21,27 @@ import {
 export class Player {
   readonly group = new Group()
 
+  private readonly visual = new Group()
   private readonly body: Mesh
-  private readonly geometries: SphereGeometry[] = []
-  private readonly materials: MeshStandardMaterial[] = []
+  private readonly eyes: Mesh[] = []
+  private readonly geometries: BufferGeometry[] = []
+  private readonly materials: Material[] = []
   private readonly hitbox = new Box3()
   private readonly hitboxCenter = new Vector3()
   private readonly hitboxSize = new Vector3()
   private laneIndex: number = PLAYER.startLane
+  private blinkCountdown = this.randomBlinkInterval()
+  private blinkElapsed = 0
+  private blinking = false
+  private elapsed = 0
+  private laneLean = 0
 
   constructor() {
     this.body = this.createBody()
-    this.group.add(this.body)
-    this.group.add(this.createEye(-PLAYER.eyeOffsetX))
-    this.group.add(this.createEye(PLAYER.eyeOffsetX))
+    this.visual.add(this.body)
+    this.visual.add(this.createEye(-PLAYER.eyeOffsetX))
+    this.visual.add(this.createEye(PLAYER.eyeOffsetX))
+    this.group.add(this.visual)
 
     this.group.position.set(laneIndexToX(this.laneIndex), PLAYER.y, PLAYER.z)
   }
@@ -38,12 +50,15 @@ export class Player {
    * @param laneDelta -1 / 0 / 1 from a single key press edge
    */
   update(delta: number, laneDelta: number): void {
+    this.elapsed += delta
+
     if (laneDelta !== 0) {
       this.laneIndex = MathUtils.clamp(
         this.laneIndex + laneDelta,
         0,
         LANES.count - 1,
       )
+      this.laneLean = -laneDelta * 0.32
     }
 
     const targetX = laneIndexToX(this.laneIndex)
@@ -53,11 +68,23 @@ export class Player {
       LANES.switchSpeed,
       delta,
     )
+    this.laneLean = MathUtils.damp(this.laneLean, 0, 8, delta)
+    this.visual.rotation.z = this.laneLean
+    this.visual.position.y = Math.sin(this.elapsed * 5) * 0.025
+    this.updateBlink(delta)
   }
 
   reset(): void {
     this.laneIndex = PLAYER.startLane
     this.group.position.set(laneIndexToX(this.laneIndex), PLAYER.y, PLAYER.z)
+    this.visual.position.y = 0
+    this.visual.rotation.z = 0
+    this.laneLean = 0
+    this.elapsed = 0
+    this.blinking = false
+    this.blinkElapsed = 0
+    this.blinkCountdown = this.randomBlinkInterval()
+    this.setEyeScale(1)
   }
 
   /**
@@ -98,33 +125,59 @@ export class Player {
     return new Mesh(geometry, material)
   }
 
-  private createEye(offsetX: number): Group {
-    const eyeGroup = new Group()
-
-    const whiteGeometry = new SphereGeometry(PLAYER.eyeRadius, 16, 16)
-    const whiteMaterial = new MeshStandardMaterial({
-      color: COLORS.eyeWhite,
-      emissive: COLORS.eyeWhite,
-      emissiveIntensity: 0.35,
-      roughness: 0.4,
+  private createEye(offsetX: number): Mesh {
+    const geometry = new CircleGeometry(PLAYER.eyeRadius, 20)
+    const material = new MeshBasicMaterial({
+      color: COLORS.playerEye,
+      toneMapped: false,
     })
-    const white = new Mesh(whiteGeometry, whiteMaterial)
-    this.geometries.push(whiteGeometry)
-    this.materials.push(whiteMaterial)
+    const eye = new Mesh(geometry, material)
+    eye.position.set(offsetX, PLAYER.eyeOffsetY, PLAYER.eyeOffsetZ)
 
-    const pupilGeometry = new SphereGeometry(PLAYER.pupilRadius, 12, 12)
-    const pupilMaterial = new MeshStandardMaterial({
-      color: COLORS.pupil,
-      roughness: 0.6,
-    })
-    const pupil = new Mesh(pupilGeometry, pupilMaterial)
-    pupil.position.z = PLAYER.eyeRadius * 0.65
-    this.geometries.push(pupilGeometry)
-    this.materials.push(pupilMaterial)
+    this.geometries.push(geometry)
+    this.materials.push(material)
+    this.eyes.push(eye)
 
-    eyeGroup.add(white, pupil)
-    eyeGroup.position.set(offsetX, PLAYER.eyeOffsetY, PLAYER.eyeOffsetZ)
+    return eye
+  }
 
-    return eyeGroup
+  private updateBlink(delta: number): void {
+    if (!this.blinking) {
+      this.blinkCountdown -= delta
+      if (this.blinkCountdown <= 0) {
+        this.blinking = true
+        this.blinkElapsed = 0
+      }
+      return
+    }
+
+    this.blinkElapsed += delta
+    const progress = Math.min(
+      1,
+      this.blinkElapsed / PLAYER.blinkDuration,
+    )
+    const closingProgress =
+      progress < 0.5 ? progress * 2 : (1 - progress) * 2
+    this.setEyeScale(MathUtils.lerp(1, 0.12, closingProgress))
+
+    if (progress >= 1) {
+      this.blinking = false
+      this.blinkCountdown = this.randomBlinkInterval()
+      this.setEyeScale(1)
+    }
+  }
+
+  private setEyeScale(scaleY: number): void {
+    for (const eye of this.eyes) {
+      eye.scale.set(1.08, scaleY, 1)
+    }
+  }
+
+  private randomBlinkInterval(): number {
+    return MathUtils.lerp(
+      PLAYER.blinkIntervalMin,
+      PLAYER.blinkIntervalMax,
+      Math.random(),
+    )
   }
 }

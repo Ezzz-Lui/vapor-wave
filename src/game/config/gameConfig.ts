@@ -5,14 +5,16 @@ export const COLORS = {
   gridSecondary: 0x00ffcc,
   playerBody: 0xff66cc,
   playerEmissive: 0xff1493,
-  eyeWhite: 0xffffff,
-  pupil: 0x1a0030,
+  playerEye: 0x09000f,
   ambientLight: 0xff88dd,
   directionalLight: 0xffffff,
   obstacleCube: 0xff2244,
   obstacleCubeEmissive: 0xff0033,
   obstaclePyramid: 0xffcc00,
   obstaclePyramidEmissive: 0xff9900,
+  worldCyan: 0x00ffcc,
+  worldMagenta: 0xff00aa,
+  worldViolet: 0x8a2be2,
 } as const
 
 /** Three discrete lanes: left (0), center (1), right (2). */
@@ -22,6 +24,8 @@ export const LANES = {
   spacing: 2.6,
   /** Lerp speed when switching lanes. */
   switchSpeed: 14,
+  /** Additional space between the outer lane centers and road edges. */
+  edgePadding: 1.3,
 } as const
 
 export const PLAYER = {
@@ -30,19 +34,41 @@ export const PLAYER = {
   z: 2,
   /** Starting lane index (center). */
   startLane: 1,
-  eyeRadius: 0.14,
-  pupilRadius: 0.07,
-  eyeOffsetX: 0.2,
+  eyeRadius: 0.085,
+  eyeOffsetX: 0.18,
   eyeOffsetY: 0.12,
-  eyeOffsetZ: 0.48,
+  eyeOffsetZ: 0.545,
+  blinkDuration: 0.13,
+  blinkIntervalMin: 2,
+  blinkIntervalMax: 4.5,
   /** Shrink AABB vs visual mesh so corner grazes feel fair. */
   hitboxScale: 0.78,
 } as const
 
 export const GRID = {
   size: 40,
-  divisions: 40,
+  crossLineSpacing: 1,
   scrollSpeed: 18,
+} as const
+
+export const WORLD = {
+  objectCount: 18,
+  nearZ: 12,
+  farZ: -62,
+  minSideOffset: 2.5,
+  maxSideOffset: 10,
+  minHeight: 0.8,
+  maxHeight: 5.5,
+  minScale: 0.65,
+  maxScale: 2.2,
+  scrollRatio: 0.52,
+} as const
+
+export const POST_PROCESSING = {
+  bloomStrength: 0.5,
+  bloomRadius: 0.25,
+  bloomThreshold: 0.12,
+  exposure: 1.05,
 } as const
 
 export const OBSTACLE = {
@@ -99,6 +125,13 @@ export const LOOP = {
 export function laneIndexToX(laneIndex: number): number {
   const center = (LANES.count - 1) / 2
   return (laneIndex - center) * LANES.spacing
+}
+
+export function getRoadHalfWidth(): number {
+  return (
+    laneIndexToX(LANES.count - 1) +
+    LANES.edgePadding
+  )
 }
 
 export function randomLaneIndex(): number {

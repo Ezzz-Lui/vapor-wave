@@ -1,14 +1,27 @@
-import { GridHelper, Group } from 'three'
-import { COLORS, GRID } from '../config/gameConfig'
+import {
+  BufferGeometry,
+  Float32BufferAttribute,
+  Group,
+  LineBasicMaterial,
+  LineSegments,
+} from 'three'
+import {
+  COLORS,
+  GRID,
+  LANES,
+  getRoadHalfWidth,
+} from '../config/gameConfig'
 
 /**
- * Two consecutive GridHelpers that scroll toward the camera and wrap,
- * creating an endless neon floor without allocating new geometry each frame.
+ * Three-lane road built from explicit line segments. Unlike GridHelper, no
+ * grid is rendered outside the playable width.
  */
 export class NeonGrid {
   readonly group = new Group()
 
-  private readonly segments: GridHelper[]
+  private readonly segments: Group[]
+  private readonly geometries: BufferGeometry[] = []
+  private readonly materials: LineBasicMaterial[] = []
   private readonly segmentLength: number
 
   constructor() {
@@ -40,27 +53,65 @@ export class NeonGrid {
   }
 
   dispose(): void {
-    for (const segment of this.segments) {
-      segment.geometry.dispose()
-      const material = segment.material
-      if (Array.isArray(material)) {
-        for (const entry of material) {
-          entry.dispose()
-        }
-      } else {
-        material.dispose()
-      }
+    for (const geometry of this.geometries) {
+      geometry.dispose()
+    }
+    for (const material of this.materials) {
+      material.dispose()
     }
   }
 
-  private createSegment(): GridHelper {
-    const helper = new GridHelper(
-      GRID.size,
-      GRID.divisions,
-      COLORS.gridPrimary,
-      COLORS.gridSecondary,
+  private createSegment(): Group {
+    const segment = new Group()
+    const roadHalfWidth = getRoadHalfWidth()
+    const laneVertices: number[] = []
+    const edgeVertices: number[] = []
+    const crossVertices: number[] = []
+
+    for (let boundary = 0; boundary <= LANES.count; boundary += 1) {
+      const x = -roadHalfWidth + boundary * LANES.spacing
+      const target =
+        boundary === 0 || boundary === LANES.count
+          ? edgeVertices
+          : laneVertices
+      target.push(x, 0.025, -GRID.size / 2, x, 0.025, GRID.size / 2)
+    }
+
+    for (
+      let z = -GRID.size / 2;
+      z <= GRID.size / 2;
+      z += GRID.crossLineSpacing
+    ) {
+      crossVertices.push(-roadHalfWidth, 0.02, z, roadHalfWidth, 0.02, z)
+    }
+
+    segment.add(
+      this.createLines(edgeVertices, COLORS.gridPrimary, 1),
+      this.createLines(laneVertices, COLORS.gridSecondary, 0.9),
+      this.createLines(crossVertices, COLORS.gridPrimary, 0.42),
     )
-    helper.position.y = 0.01
-    return helper
+
+    return segment
+  }
+
+  private createLines(
+    vertices: number[],
+    color: number,
+    opacity: number,
+  ): LineSegments {
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3))
+
+    const material = new LineBasicMaterial({
+      color,
+      transparent: opacity < 1,
+      opacity,
+      toneMapped: false,
+    })
+
+    this.geometries.push(geometry)
+    this.materials.push(material)
+
+    return new LineSegments(geometry, material)
   }
 }

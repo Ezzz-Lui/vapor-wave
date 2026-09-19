@@ -1,4 +1,5 @@
 import {
+  ACESFilmicToneMapping,
   AmbientLight,
   Color,
   DirectionalLight,
@@ -13,10 +14,13 @@ import {
   COLORS,
   FOG,
   LOOP,
+  POST_PROCESSING,
   RENDERER,
 } from '../config/gameConfig'
 import { Player } from '../entities/Player'
+import { GeometricWorld } from '../environment/GeometricWorld'
 import { NeonGrid } from '../environment/NeonGrid'
+import { PostProcessing } from '../graphics/PostProcessing'
 import { KeyboardInput } from '../input/KeyboardInput'
 import { DifficultySystem } from '../systems/DifficultySystem'
 import { ObstacleManager } from '../systems/ObstacleManager'
@@ -29,10 +33,12 @@ export class Game {
   private readonly scene: Scene
   private readonly camera: PerspectiveCamera
   private readonly renderer: WebGLRenderer
+  private readonly postProcessing: PostProcessing
   private readonly timer = new Timer()
   private readonly input = new KeyboardInput()
   private readonly player: Player
   private readonly neonGrid: NeonGrid
+  private readonly geometricWorld: GeometricWorld
   private readonly obstacles: ObstacleManager
   private readonly score = new ScoreSystem()
   private readonly difficulty = new DifficultySystem()
@@ -58,11 +64,19 @@ export class Game {
     this.scene = this.createScene()
     this.camera = this.createCamera()
     this.renderer = this.createRenderer(canvas)
+    this.postProcessing = new PostProcessing(
+      this.renderer,
+      this.scene,
+      this.camera,
+    )
 
     this.addLights()
 
     this.neonGrid = new NeonGrid()
     this.scene.add(this.neonGrid.group)
+
+    this.geometricWorld = new GeometricWorld()
+    this.scene.add(this.geometricWorld.group)
 
     this.player = new Player()
     this.scene.add(this.player.group)
@@ -100,6 +114,7 @@ export class Game {
     this.score.reset()
     this.difficulty.reset()
     this.input.reset()
+    this.geometricWorld.reset()
 
     this.lastReportedScore = -1
     this.gameOver = false
@@ -117,6 +132,8 @@ export class Game {
     this.obstacles.dispose()
     this.player.dispose()
     this.neonGrid.dispose()
+    this.geometricWorld.dispose()
+    this.postProcessing.dispose()
     this.renderer.dispose()
   }
 
@@ -133,6 +150,7 @@ export class Game {
 
     this.player.update(delta, this.input.consumeLaneDelta())
     this.neonGrid.update(delta, scrollSpeed)
+    this.geometricWorld.update(delta, scrollSpeed)
     this.obstacles.update(delta, scrollSpeed, spawnInterval)
 
     if (this.obstacles.checkCollisions(this.player.getHitbox())) {
@@ -140,7 +158,7 @@ export class Game {
       return
     }
 
-    this.renderer.render(this.scene, this.camera)
+    this.postProcessing.render()
   }
 
   private reportScoreIfChanged(): void {
@@ -154,7 +172,7 @@ export class Game {
     if (this.gameOver) return
     this.gameOver = true
     this.stop()
-    this.renderer.render(this.scene, this.camera)
+    this.postProcessing.render()
     this.onGameOver?.(this.score.getScore())
   }
 
@@ -188,6 +206,8 @@ export class Game {
     renderer.setPixelRatio(
       Math.min(window.devicePixelRatio, RENDERER.maxPixelRatio),
     )
+    renderer.toneMapping = ACESFilmicToneMapping
+    renderer.toneMappingExposure = POST_PROCESSING.exposure
     return renderer
   }
 
@@ -205,9 +225,12 @@ export class Game {
     this.camera.aspect = width / height
     this.camera.updateProjectionMatrix()
 
-    this.renderer.setPixelRatio(
-      Math.min(window.devicePixelRatio, RENDERER.maxPixelRatio),
+    const pixelRatio = Math.min(
+      window.devicePixelRatio,
+      RENDERER.maxPixelRatio,
     )
+    this.renderer.setPixelRatio(pixelRatio)
     this.renderer.setSize(width, height, false)
+    this.postProcessing.resize(width, height, pixelRatio)
   }
 }
