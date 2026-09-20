@@ -5,32 +5,20 @@ import {
   type CSSProperties,
 } from 'react'
 import { Game } from './game/core/Game'
+import {
+  loadHighScore,
+  loadMusicEnabled,
+  saveHighScore,
+} from './game/persistence/storage'
 import type { StageInfo } from './game/systems/StageSystem'
+import { HomeScreen } from './ui/HomeScreen'
 
-const HIGH_SCORE_KEY = 'vapor-wave-high-score'
 const INITIAL_STAGE: StageInfo = {
   id: 'easy',
   name: 'Fácil',
   color: '#00b7ff',
   minScore: 0,
   targetScore: 500,
-}
-
-function loadHighScore(): number {
-  try {
-    const stored = Number(localStorage.getItem(HIGH_SCORE_KEY))
-    return Number.isFinite(stored) && stored > 0 ? stored : 0
-  } catch {
-    return 0
-  }
-}
-
-function saveHighScore(score: number): void {
-  try {
-    localStorage.setItem(HIGH_SCORE_KEY, String(score))
-  } catch {
-    // The game still works when storage is disabled or unavailable.
-  }
 }
 
 function App() {
@@ -42,6 +30,8 @@ function App() {
   const [finalScore, setFinalScore] = useState(0)
   const [isGameOver, setIsGameOver] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
+  const [isHome, setIsHome] = useState(true)
+  const [musicEnabled, setMusicEnabled] = useState(loadMusicEnabled)
   const [stage, setStage] = useState<StageInfo>(INITIAL_STAGE)
 
   useEffect(() => {
@@ -87,11 +77,25 @@ function App() {
     }
   }, [isGameOver])
 
+  const startGame = (): void => {
+    setIsHome(false)
+    setIsGameOver(false)
+    setScore(0)
+    setFinalScore(0)
+    gameRef.current?.startRun()
+  }
+
   const resetGame = (): void => {
     setIsGameOver(false)
     setScore(0)
     setFinalScore(0)
     gameRef.current?.resetGame()
+  }
+
+  const toggleMusic = (): void => {
+    const nextEnabled = !musicEnabled
+    setMusicEnabled(nextEnabled)
+    gameRef.current?.setMusicEnabled(nextEnabled)
   }
 
   const stageProgress = Math.min(
@@ -110,39 +114,50 @@ function App() {
   return (
     <>
       <canvas ref={canvasRef} className="game-canvas" />
-      <div className="score-hud" style={hudStyle} aria-live="polite">
-        <div>
-          SCORE <span>{score}</span>
-        </div>
-        <div className="high-score">
-          HIGH SCORE <span>{highScore}</span>
-        </div>
-        <div className="stage-label">
-          STAGE <strong>{stage.name}</strong>
-        </div>
-        <div className="stage-progress" aria-hidden="true">
-          <span style={{ width: `${stageProgress}%` }} />
-        </div>
-        <small>META {stage.targetScore}</small>
-      </div>
-      <button
-        type="button"
-        className="pause-button"
-        onClick={() => gameRef.current?.togglePause()}
-        disabled={isGameOver}
-      >
-        {isPaused ? 'Reanudar' : 'Pausa'} <kbd>Esc</kbd>
-      </button>
-      <div className="controls-hint">
-        A / D CAMBIAR CARRIL · ESPACIO SALTAR
-      </div>
-      <div
-        className={`pause-overlay ${isPaused ? 'is-visible' : ''}`}
-        aria-hidden={!isPaused}
-      >
-        <strong>PAUSA</strong>
-        <span>Presiona Esc para continuar</span>
-      </div>
+      {isHome ? (
+        <HomeScreen
+          highScore={highScore}
+          musicEnabled={musicEnabled}
+          onToggleMusic={toggleMusic}
+          onStart={startGame}
+        />
+      ) : (
+        <>
+          <div className="score-hud" style={hudStyle} aria-live="polite">
+            <div>
+              SCORE <span>{score}</span>
+            </div>
+            <div className="high-score">
+              HIGH SCORE <span>{highScore}</span>
+            </div>
+            <div className="stage-label">
+              STAGE <strong>{stage.name}</strong>
+            </div>
+            <div className="stage-progress" aria-hidden="true">
+              <span style={{ width: `${stageProgress}%` }} />
+            </div>
+            <small>META {stage.targetScore}</small>
+          </div>
+          <button
+            type="button"
+            className="pause-button"
+            onClick={() => gameRef.current?.togglePause()}
+            disabled={isGameOver}
+          >
+            {isPaused ? 'Reanudar' : 'Pausa'} <kbd>Esc</kbd>
+          </button>
+          <div className="controls-hint">
+            A / D CAMBIAR CARRIL · ESPACIO SALTAR
+          </div>
+          <div
+            className={`pause-overlay ${isPaused ? 'is-visible' : ''}`}
+            aria-hidden={!isPaused}
+          >
+            <strong>PAUSA</strong>
+            <span>Presiona Esc para continuar</span>
+          </div>
+        </>
+      )}
       <dialog ref={dialogRef} className="game-over-dialog">
         <h1>Game Over</h1>
         <p>

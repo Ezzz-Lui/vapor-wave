@@ -13,6 +13,7 @@ import {
   CAMERA,
   COLORS,
   FOG,
+  HOME,
   LOOP,
   POST_PROCESSING,
   RENDERER,
@@ -21,6 +22,7 @@ import { Player } from '../entities/Player'
 import { GeometricWorld } from '../environment/GeometricWorld'
 import { NeonGrid } from '../environment/NeonGrid'
 import { PostProcessing } from '../graphics/PostProcessing'
+import { Soundtrack } from '../audio/Soundtrack'
 import { KeyboardInput } from '../input/KeyboardInput'
 import { DifficultySystem } from '../systems/DifficultySystem'
 import { ObstacleManager } from '../systems/ObstacleManager'
@@ -41,6 +43,7 @@ export class Game {
   private readonly renderer: WebGLRenderer
   private readonly postProcessing: PostProcessing
   private readonly timer = new Timer()
+  private readonly soundtrack = new Soundtrack()
   private readonly input = new KeyboardInput()
   private readonly backgroundColor = new Color(COLORS.background)
   private readonly targetBackground = new Color(COLORS.background)
@@ -64,6 +67,8 @@ export class Game {
   private running = false
   private gameOver = false
   private paused = false
+  private preview = true
+  private previewElapsed = 0
   private lastReportedScore = -1
 
   constructor(
@@ -97,6 +102,7 @@ export class Game {
     this.scene.add(this.geometricWorld.group)
 
     this.player = new Player()
+    this.player.setVisible(false)
     this.scene.add(this.player.group)
 
     this.obstacles = new ObstacleManager(this.scene)
@@ -115,6 +121,7 @@ export class Game {
     this.running = true
     this.paused = false
     this.onPauseChange?.(false)
+    this.soundtrack.play()
     this.renderer.setAnimationLoop(this.tick)
   }
 
@@ -124,8 +131,16 @@ export class Game {
     this.renderer.setAnimationLoop(null)
   }
 
+  isMusicEnabled(): boolean {
+    return this.soundtrack.isEnabled()
+  }
+
+  setMusicEnabled(enabled: boolean): void {
+    this.soundtrack.setEnabled(enabled)
+  }
+
   togglePause = (): void => {
-    if (this.gameOver) return
+    if (this.gameOver || this.preview) return
 
     if (this.paused) {
       this.resume()
@@ -134,29 +149,19 @@ export class Game {
     }
   }
 
+  startRun(): void {
+    this.preview = false
+    this.previewElapsed = 0
+    this.beginRun(true)
+  }
+
   /**
    * Full arcade restart: dispose live obstacles, restore baseline state,
    * hide game-over UI (via caller), and resume the animation loop.
    */
   resetGame(): void {
-    this.stop()
-
-    this.obstacles.clear()
-    this.player.reset()
-    this.score.reset()
-    this.stages.reset()
-    this.difficulty.reset(this.stages.getCurrent())
-    this.input.reset()
-    this.geometricWorld.reset()
-
-    this.lastReportedScore = -1
-    this.gameOver = false
-    this.paused = false
-    this.onScoreChange?.(0)
-    this.onPauseChange?.(false)
-    this.applyStage(true)
-
-    this.start()
+    this.preview = false
+    this.beginRun(true)
   }
 
   dispose(): void {
@@ -170,12 +175,45 @@ export class Game {
     this.neonGrid.dispose()
     this.geometricWorld.dispose()
     this.postProcessing.dispose()
+    this.soundtrack.dispose()
     this.renderer.dispose()
+  }
+
+  private beginRun(restartMusic: boolean): void {
+    this.stop()
+
+    this.obstacles.clear()
+    this.player.reset()
+    this.player.setVisible(true)
+    this.score.reset()
+    this.stages.reset()
+    this.difficulty.reset(this.stages.getCurrent())
+    this.input.reset()
+    this.geometricWorld.reset()
+
+    this.lastReportedScore = -1
+    this.gameOver = false
+    this.paused = false
+    this.onScoreChange?.(0)
+    this.onPauseChange?.(false)
+    this.applyStage(true)
+
+    if (restartMusic) {
+      this.soundtrack.restart()
+    }
+
+    this.start()
   }
 
   private readonly tick = (timestamp: number): void => {
     this.timer.update(timestamp)
     const delta = Math.min(this.timer.getDelta(), LOOP.maxDelta)
+
+    if (this.preview) {
+      this.updatePreview(delta)
+      this.postProcessing.render()
+      return
+    }
 
     this.score.update(delta)
     this.reportScoreIfChanged()
@@ -212,6 +250,36 @@ export class Game {
     }
 
     this.postProcessing.render()
+  }
+
+  private updatePreview(delta: number): void {
+    this.previewElapsed += delta
+
+    if (this.previewElapsed >= HOME.previewStageInterval) {
+      this.previewElapsed = 0
+      this.stages.cycle()
+      this.obstacles.clear()
+      this.difficulty.reset(this.stages.getCurrent())
+      this.applyStage(false)
+    }
+
+    const stage = this.stages.getCurrent()
+    this.difficulty.update(delta, stage)
+    this.updateEnvironmentColors(delta)
+
+    const scrollSpeed = this.difficulty.getScrollSpeed()
+    const spawnInterval = this.difficulty.getSpawnInterval()
+
+    this.input.consumeLaneDelta()
+    this.input.consumeJump()
+    this.neonGrid.update(delta, scrollSpeed)
+    this.geometricWorld.update(delta, scrollSpeed)
+    this.obstacles.update(
+      delta,
+      scrollSpeed,
+      spawnInterval,
+      stage,
+    )
   }
 
   private reportScoreIfChanged(): void {
@@ -298,7 +366,7 @@ export class Game {
   }
 
   private resume(): void {
-    if (!this.paused || this.gameOver) return
+    if (!this.paused || this.gameOver || this.preview) return
 
     this.paused = false
     this.running = true

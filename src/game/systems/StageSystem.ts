@@ -150,6 +150,15 @@ export class StageSystem {
     this.current = STAGES[0] as StageDefinition
   }
 
+  cycle(): StageDefinition {
+    const currentIndex = STAGES.findIndex(
+      (stage) => stage.id === this.current.id,
+    )
+    const nextIndex = (currentIndex + 1) % STAGES.length
+    this.current = STAGES[nextIndex] as StageDefinition
+    return this.current
+  }
+
   private findStage(score: number): StageDefinition {
     for (let index = STAGES.length - 1; index >= 0; index -= 1) {
       const stage = STAGES[index]

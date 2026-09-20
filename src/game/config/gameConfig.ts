@@ -120,6 +120,25 @@ export const RENDERER = {
   maxPixelRatio: 2,
 } as const
 
+export const AUDIO = {
+  volume: 0.55,
+} as const
+
+export const HOME = {
+  previewStageInterval: 5,
+} as const
+
+export const META = {
+  title: 'VAPOR WAVE',
+  githubUrl: 'https://github.com/Ezzz-Lui/vapor-wave',
+  author: 'Ezzz-Lui',
+} as const
+
+export const STORAGE_KEYS = {
+  highScore: 'vapor-wave-high-score',
+  musicEnabled: 'vapor-wave-music-enabled',
+} as const
+
 export const LOOP = {
   maxDelta: 0.05,
 } as const

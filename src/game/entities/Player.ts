@@ -120,6 +120,10 @@ export class Player {
     this.setEyeScale(1)
   }
 
+  setVisible(visible: boolean): void {
+    this.group.visible = visible
+  }
+
   /**
    * AABB from the body mesh only (eyes ignored), then scaled down so
    * grazing the neon silhouette does not instantly trigger game over.

@@ -161,6 +161,125 @@ body,
   font: 0.75rem ui-monospace, Consolas, monospace;
 }
 
+.home-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background:
+    linear-gradient(180deg, rgba(4, 0, 12, 0.18) 0%, rgba(4, 0, 12, 0.52) 100%);
+}
+
+.home-panel {
+  width: min(92vw, 28rem);
+  text-align: center;
+  color: #f4eeff;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.home-kicker {
+  margin: 0 0 0.4rem;
+  color: #00ffcc;
+  font: 700 0.72rem ui-monospace, Consolas, monospace;
+  letter-spacing: 0.34em;
+  text-shadow: 0 0 14px rgba(0, 255, 204, 0.55);
+}
+
+.home-title {
+  margin: 0;
+  color: #ff66cc;
+  font-size: clamp(2.6rem, 8vw, 4.6rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 0.95;
+  text-shadow:
+    0 0 12px rgba(255, 102, 204, 0.9),
+    0 0 28px rgba(255, 0, 170, 0.7),
+    0 0 48px rgba(0, 183, 255, 0.35);
+}
+
+.home-high-score {
+  margin: 1.1rem 0 1.4rem;
+  color: #bcaec9;
+  font: 0.8rem ui-monospace, Consolas, monospace;
+  letter-spacing: 0.14em;
+}
+
+.home-high-score span {
+  color: #00ffcc;
+  margin-left: 0.4rem;
+  text-shadow: 0 0 12px rgba(0, 255, 204, 0.45);
+}
+
+.home-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.home-start,
+.home-setting {
+  appearance: none;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  font: 700 0.95rem 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.home-start {
+  border: 1px solid #00ffcc;
+  background: rgba(0, 255, 204, 0.12);
+  color: #00ffcc;
+  box-shadow: 0 0 18px rgba(0, 255, 204, 0.18);
+}
+
+.home-setting {
+  border: 1px solid rgba(255, 102, 204, 0.5);
+  background: rgba(18, 0, 31, 0.55);
+  color: #ffb3e6;
+}
+
+.home-start:hover,
+.home-start:focus-visible,
+.home-setting:hover,
+.home-setting:focus-visible {
+  outline: none;
+  filter: brightness(1.12);
+}
+
+.home-repo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 1.4rem;
+  color: #f4eeff;
+  font: 0.85rem ui-monospace, Consolas, monospace;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.home-repo:hover,
+.home-repo:focus-visible {
+  color: #00ffcc;
+  outline: none;
+}
+
+.home-repo-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.home-credit {
+  margin: 0.85rem 0 0;
+  color: #8b7d99;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+}
+
 .game-over-dialog {
   margin: auto;
   border: 1px solid #ff00aa;
