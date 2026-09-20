@@ -1,35 +1,60 @@
-# React + TypeScript + Vite
+# VAPOR WAVE
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Endless runner 3D con estética synthwave. Three.js + React + Vite + TypeScript.
 
-Currently, two official plugins are available:
+Repo: [https://github.com/Ezzz-Lui/vapor-wave](https://github.com/Ezzz-Lui/vapor-wave)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Requisitos
 
-## React Compiler
+- [Bun](https://bun.sh/) **o** [pnpm](https://pnpm.io/) (`npm i -g pnpm`)
+- Navegador con WebGL (Chrome, Edge, Firefox)
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+No hay variables de entorno. Clonás, instalás y corrés.
 
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
+## Ejecutar en local
 
-## Expanding the Oxlint configuration
+### Con Bun
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+git clone https://github.com/Ezzz-Lui/vapor-wave.git
+cd vapor-wave
+bun install
+bun run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Abrí la URL que imprime Vite, normalmente `http://localhost:5173`.
+
+### Con pnpm
+
+```bash
+git clone https://github.com/Ezzz-Lui/vapor-wave.git
+cd vapor-wave
+pnpm install
+pnpm dev
+```
+
+Misma URL: `http://localhost:5173`.
+
+## Cómo jugar
+
+1. En el Home: **Empezar partida**.
+2. `A` / `D` o flechas: cambiar de carril.
+3. `Espacio`: saltar (a partir del stage Difícil, cuando aparecen filas de 3 obstáculos).
+4. `Esc`: pausar / reanudar.
+5. En el Home podés activar o desactivar la música. Esa preferencia se guarda en `localStorage`.
+
+## Scripts
+
+| Comando | Bun | pnpm |
+| --- | --- | --- |
+| Dev | `bun run dev` | `pnpm dev` |
+| Build | `bun run build` | `pnpm build` |
+| Preview del build | `bun run preview` | `pnpm preview` |
+| Lint | `bun run lint` | `pnpm lint` |
+
+## Stack
+
+- React 19 + TypeScript
+- Vite 8
+- Three.js (`WebGLRenderer` + postprocesado bloom)
+- Audio de fondo en loop (`src/assets/game-soundtrack.mp3`)
