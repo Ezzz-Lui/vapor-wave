@@ -4,10 +4,25 @@
 export class KeyboardInput {
   private leftHeld = false
   private rightHeld = false
+  private jumpHeld = false
   private leftJustPressed = false
   private rightJustPressed = false
+  private jumpJustPressed = false
+  private pauseHandler?: () => void
 
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    if (event.code === 'Escape') {
+      if (!event.repeat) this.pauseHandler?.()
+      return
+    }
+
+    if (
+      event.code === 'Space' ||
+      event.code === 'ArrowLeft' ||
+      event.code === 'ArrowRight'
+    ) {
+      event.preventDefault()
+    }
     this.setKey(event.code, true)
   }
   private readonly onKeyUp = (event: KeyboardEvent): void => {
@@ -19,6 +34,10 @@ export class KeyboardInput {
     window.addEventListener('keyup', this.onKeyUp)
   }
 
+  setPauseHandler(handler: () => void): void {
+    this.pauseHandler = handler
+  }
+
   disconnect(): void {
     window.removeEventListener('keydown', this.onKeyDown)
     window.removeEventListener('keyup', this.onKeyUp)
@@ -28,8 +47,10 @@ export class KeyboardInput {
   reset(): void {
     this.leftHeld = false
     this.rightHeld = false
+    this.jumpHeld = false
     this.leftJustPressed = false
     this.rightJustPressed = false
+    this.jumpJustPressed = false
   }
 
   /**
@@ -45,6 +66,12 @@ export class KeyboardInput {
     return delta
   }
 
+  consumeJump(): boolean {
+    const requested = this.jumpJustPressed
+    this.jumpJustPressed = false
+    return requested
+  }
+
   private setKey(code: string, pressed: boolean): void {
     switch (code) {
       case 'ArrowLeft':
@@ -56,6 +83,10 @@ export class KeyboardInput {
       case 'KeyD':
         if (pressed && !this.rightHeld) this.rightJustPressed = true
         this.rightHeld = pressed
+        break
+      case 'Space':
+        if (pressed && !this.jumpHeld) this.jumpJustPressed = true
+        this.jumpHeld = pressed
         break
       default:
         break
